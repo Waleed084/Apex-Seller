@@ -603,7 +603,7 @@ app.post('/api/cart', (req, res) => {
 });
 
 // Get cart items
-app.get('/api/cart', (req, res) => {
+app.get('/api/cart-data', (req, res) => {
   CartModel.find()
     .then((cartItems) => res.json(cartItems))
     .catch((error) => res.status(500).send(error));
@@ -615,6 +615,65 @@ app.get('/api/cart/:id', (req, res) => {
     .catch((error) => res.status(500).send(error));
 });
 
+// Order model
+const OrderSchema = new mongoose.Schema({
+  type: String,
+  company: String,
+  quantity: Number,
+  price: Number,
+  properties: Object,
+  customerDetails: {
+    name: String,
+    address: String,
+    phoneNumber: String,
+    email: String,
+    country: String,
+    postalCode: String
+  }
+});
+
+const Order = mongoose.model('Order', OrderSchema);
+
+// Routes
+app.post('/api/allorders', async (req, res) => {
+  const { type, company, quantity, price, properties, customerDetails } = req.body;
+
+  const newOrder = new Order({
+    type,
+    company,
+    quantity,
+    price,
+    properties,
+    customerDetails
+  });
+
+  try {
+    const savedOrder = await newOrder.save();
+    res.status(201).json(savedOrder);
+  } catch (err) {
+    res.status(400).json({ error: 'Error saving order' });
+  }
+});
+// Route to delete the order
+app.delete('/api/cart/delete/:id', async (req, res) => {
+  try {
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: 'Invalid cart item ID' });
+    }
+
+    // Find and delete the cart item
+    const deletedCartItem = await CartModel.findByIdAndDelete(req.params.id);
+    // Check if item was found and deleted
+    if (!deletedCartItem) {
+      return res.status(404).json({ error: 'Cart item not found' });
+    }
+
+    res.status(200).json({ message: 'Cart item deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
